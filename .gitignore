@@ -1,0 +1,37 @@
+# CMake build directory and generated files
+/build/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+
+# Build outputs
+*.a
+*.dll
+*.exe
+*.lib
+*.obj
+*.o
+*.out
+
+# Python generated files
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Coverage and profiling output
+.coverage
+htmlcov/
+
+# IDE and editor metadata
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Operating system files
+.DS_Store
+Thumbs.db
