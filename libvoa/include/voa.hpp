@@ -27,11 +27,11 @@ class voa_controller
 	std::vector<calibration_segment> segments;
 
 	double evaluate_polynomial(double x,
-				  const std::vector<double> &coeffs) const;
+				   const std::vector<double> &coeffs) const;
 
     public:
 	voa_controller(const hardware_config &hw,
-		      const std::vector<calibration_segment> &cal_segments);
+		       const std::vector<calibration_segment> &cal_segments);
 
 	uint32_t calculate_dac_code(double target_db) const;
 

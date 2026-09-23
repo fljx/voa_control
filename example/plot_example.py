@@ -14,7 +14,7 @@ DATA_ROW = re.compile(
     r"^\s*(?P<attenuation>[-+]?\d+(?:\.\d+)?)\s+dB\s+\|\s+"
     r"(?P<dac_code>\d+)\s*$"
 )
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_EXECUTABLE = PROJECT_ROOT / "build" / "example-01.exe"
 
 
@@ -62,10 +62,11 @@ def plot_sweep(
 ) -> None:
     """Plot the DAC code as a function of target attenuation."""
     fig, axis = plt.subplots(figsize=(9, 5.5))
-    axis.plot(attenuation_values, dac_codes, marker="o", markersize=3, linewidth=1.5)
+    axis.plot(dac_codes, attenuation_values,
+              marker="o", markersize=3, linewidth=1.5)
     axis.set_title("VOA DAC Sweep")
-    axis.set_xlabel("Target attenuation (dB)")
-    axis.set_ylabel("DAC code")
+    axis.set_xlabel("DAC code")
+    axis.set_ylabel("Target attenuation (dB)")
     axis.grid(True, alpha=0.3)
     fig.tight_layout()
 

@@ -6,17 +6,19 @@
 
 double
 voa_controller::evaluate_polynomial(double x,
-				  const std::vector<double> &coeffs) const
+				    const std::vector<double> &coeffs) const
 {
 	double result = 0.0;
-	for (double coefficient : coeffs) {
+	for (double coefficient : coeffs)
+	{
 		result = result * x + coefficient;
 	}
 	return result;
 }
 
-voa_controller::voa_controller(const hardware_config &hw,
-			     const std::vector<calibration_segment> &cal_segments)
+voa_controller::voa_controller(
+	const hardware_config &hw,
+	const std::vector<calibration_segment> &cal_segments)
 	: hw_config(hw), segments(cal_segments)
 {
 }
@@ -29,12 +31,14 @@ uint32_t voa_controller::calculate_dac_code(double target_db) const
 					      target_db <= seg.max_db;
 			       });
 
-	if (it == segments.end()) {
+	if (it == segments.end())
+	{
 		throw std::out_of_range(
 			"Requested attenuation is outside calibrated limits.");
 	}
 
-	double target_voltage = evaluate_polynomial(target_db, it->coefficients);
+	double target_voltage =
+		evaluate_polynomial(target_db, it->coefficients);
 
 	target_voltage = std::max(0.0, std::min(target_voltage,
 						hw_config.hardware_vmax));
