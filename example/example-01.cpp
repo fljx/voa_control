@@ -1,10 +1,20 @@
 #include "voa.hpp"
 
+#include <cmath>
 #include <iostream>
 #include <print>
+#include <string_view>
 
-int main()
+int main(int argc, char **argv)
 {
+	bool percent_sweep =
+		argc > 1 && std::string_view(argv[1]) == "--percent";
+	if (argc > 1 && !percent_sweep)
+	{
+		std::cerr << "Usage: example-01 [--percent]\n";
+		return 2;
+	}
+
 	// Hardware configuration matched to your 16-bit DAC circuit setup
 	hardware_config hw_agiltron{
 		.dac_max_code = 65535, // 16-bit DAC
@@ -26,14 +36,15 @@ int main()
 	voa_controller controller(hw_agiltron, cal_agiltron);
 
 	// Pull the absolute calibration bounds to feed our sweep dynamically
-	double min_attenuation = controller.get_absolute_min_db(); // 0.5 dB
-	double max_attenuation = controller.get_absolute_max_db(); // 40.0 dB
+	double min_attenuation = controller.absolute_min_db(); // 0.5 dB
+	double max_attenuation = controller.absolute_max_db(); // 40.0 dB
 	double step_size = 0.5; // Sweep step size in dB
 
 	std::print("Starting Sweep from Minimum to Maximum Attenuation...\n");
 	std::print(
 		"--------------------------------------------------------\n");
-	std::print("Target (dB) | Computed DAC Code (Raw Integer)\n");
+	std::print("Target ({}) | Computed DAC Code (Raw Integer)\n",
+			percent_sweep ? "%" : "dB");
 	std::print(
 		"--------------------------------------------------------\n");
 
@@ -41,13 +52,17 @@ int main()
 	for (double target_db = min_attenuation; target_db <= max_attenuation;
 	     target_db += step_size)
 	{
+		double target_percent =
+			100.0 * (1.0 - std::pow(10.0, -target_db / 10.0));
 		try
 		{
-			uint32_t dac_code =
-				controller.calculate_dac_code(target_db);
+			uint32_t dac_code = percent_sweep
+				? controller.calculate_dac_code(percent{target_percent})
+				: controller.calculate_dac_code(dB{target_db});
 
-			std::print("  {:5.2f} dB   |   {:5}\n", target_db,
-				   dac_code);
+			std::print("  {:8.2f} {}   |   {:5}\n",
+				   percent_sweep ? target_percent : target_db,
+				   percent_sweep ? "%" : "dB", dac_code);
 
 			// In your embedded Linux production app, call your SPI/I2C peripheral here:
 			// ioctl_write_dac(dac_code);
@@ -55,8 +70,10 @@ int main()
 		}
 		catch (const std::exception &e)
 		{
-			std::cerr << "Error calculating for " << target_db
-				  << " dB: " << e.what() << "\n";
+			std::cerr << "Error calculating for "
+				  << (percent_sweep ? target_percent : target_db)
+				  << (percent_sweep ? " %: " : " dB: ") << e.what()
+				  << "\n";
 		}
 	}
 

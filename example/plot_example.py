@@ -11,32 +11,41 @@ import matplotlib.pyplot as plt
 
 
 DATA_ROW = re.compile(
-    r"^\s*(?P<attenuation>[-+]?\d+(?:\.\d+)?)\s+dB\s+\|\s+"
+    r"^\s*(?P<attenuation>[-+]?\d+(?:\.\d+)?)\s+"
+    r"(?P<unit>dB|%)\s+\|\s+"
     r"(?P<dac_code>\d+)\s*$"
 )
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_EXECUTABLE = PROJECT_ROOT / "build" / "example-01.exe"
 
 
-def parse_output(output: str) -> tuple[list[float], list[int]]:
+def parse_output(output: str) -> tuple[list[float], list[int], str]:
     """Extract attenuation and DAC code values from example output."""
     attenuation_values: list[float] = []
     dac_codes: list[int] = []
+    unit: str | None = None
 
     for line in output.splitlines():
         match = DATA_ROW.match(line)
         if match is None:
             continue
+        current_unit = match.group("unit")
+        if unit is None:
+            unit = current_unit
+        elif current_unit != unit:
+            raise ValueError("Example output contains mixed attenuation units.")
         attenuation_values.append(float(match.group("attenuation")))
         dac_codes.append(int(match.group("dac_code")))
 
     if not attenuation_values:
         raise ValueError("No DAC sweep rows were found in the example output.")
 
-    return attenuation_values, dac_codes
+    return attenuation_values, dac_codes, unit or "dB"
 
 
-def read_example_output(executable: Path, input_file: Path | None) -> str:
+def read_example_output(
+    executable: Path, input_file: Path | None, percent_sweep: bool
+) -> str:
     """Run the example or read previously captured output."""
     if input_file is not None:
         return input_file.read_text(encoding="utf-8")
@@ -47,8 +56,12 @@ def read_example_output(executable: Path, input_file: Path | None) -> str:
             "Build it first or pass --input with captured output."
         )
 
+    command = [str(executable)]
+    if percent_sweep:
+        command.append("--percent")
+
     result = subprocess.run(
-        [str(executable)],
+        command,
         cwd=PROJECT_ROOT,
         check=True,
         capture_output=True,
@@ -58,7 +71,10 @@ def read_example_output(executable: Path, input_file: Path | None) -> str:
 
 
 def plot_sweep(
-    attenuation_values: list[float], dac_codes: list[int], output_file: Path | None
+    attenuation_values: list[float],
+    dac_codes: list[int],
+    unit: str,
+    output_file: Path | None,
 ) -> None:
     """Plot the DAC code as a function of target attenuation."""
     fig, axis = plt.subplots(figsize=(9, 5.5))
@@ -66,7 +82,7 @@ def plot_sweep(
               marker="o", markersize=3, linewidth=1.5)
     axis.set_title("VOA DAC Sweep")
     axis.set_xlabel("DAC code")
-    axis.set_ylabel("Target attenuation (dB)")
+    axis.set_ylabel(f"Target attenuation ({unit})")
     axis.grid(True, alpha=0.3)
     fig.tight_layout()
 
@@ -95,11 +111,16 @@ def main() -> None:
         type=Path,
         help="Save the plot to an image instead of opening a window.",
     )
+    parser.add_argument(
+        "--percent",
+        action="store_true",
+        help="Run and plot the percent attenuation sweep.",
+    )
     args = parser.parse_args()
 
-    output = read_example_output(args.executable, args.input)
-    attenuation_values, dac_codes = parse_output(output)
-    plot_sweep(attenuation_values, dac_codes, args.output)
+    output = read_example_output(args.executable, args.input, args.percent)
+    attenuation_values, dac_codes, unit = parse_output(output)
+    plot_sweep(attenuation_values, dac_codes, unit, args.output)
 
 
 if __name__ == "__main__":

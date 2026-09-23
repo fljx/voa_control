@@ -23,12 +23,34 @@ voa_controller::voa_controller(
 {
 }
 
-uint32_t voa_controller::calculate_dac_code(double target_db) const
+uint32_t voa_controller::calculate_dac_code(dB target) const
 {
+	return calculate_dac_code_from_db(target.value());
+}
+
+uint32_t
+voa_controller::calculate_dac_code(percent target) const
+{
+	double percentage = target.value();
+	if (!std::isfinite(percentage) || percentage < 0.0 || percentage >= 100.0)
+	{
+		throw std::out_of_range(
+			"Attenuation percentage must be in the range [0, 100). ");
+	}
+
+	double transmission = 1.0 - percentage / 100.0;
+	double target_db = -10.0 * std::log10(transmission);
+	return calculate_dac_code_from_db(target_db);
+}
+
+uint32_t voa_controller::calculate_dac_code_from_db(double target_db) const
+{
+	constexpr double calibration_epsilon = 1e-12;
 	auto it = std::find_if(segments.begin(), segments.end(),
-			       [target_db](const calibration_segment &seg) {
-				       return target_db >= seg.min_db &&
-					      target_db <= seg.max_db;
+			       [target_db, calibration_epsilon](
+				       const calibration_segment &seg) {
+				       return target_db >= seg.min_db - calibration_epsilon &&
+					      target_db <= seg.max_db + calibration_epsilon;
 			       });
 
 	if (it == segments.end())
@@ -55,7 +77,7 @@ uint32_t voa_controller::calculate_dac_code(double target_db) const
 		std::round(normalized_fraction * hw_config.dac_max_code));
 }
 
-double voa_controller::get_absolute_min_db() const
+double voa_controller::absolute_min_db() const
 {
 	auto min_elem = std::min_element(segments.begin(), segments.end(),
 					 [](const calibration_segment &a,
@@ -65,7 +87,7 @@ double voa_controller::get_absolute_min_db() const
 	return (min_elem != segments.end()) ? min_elem->min_db : 0.0;
 }
 
-double voa_controller::get_absolute_max_db() const
+double voa_controller::absolute_max_db() const
 {
 	auto max_elem = std::max_element(segments.begin(), segments.end(),
 					 [](const calibration_segment &a,

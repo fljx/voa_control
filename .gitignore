@@ -35,3 +35,9 @@ htmlcov/
 # Operating system files
 .DS_Store
 Thumbs.db
+
+# Image types
+*.png
+*.jpg
+*.jpeg
+*.bmp
